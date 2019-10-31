@@ -27,12 +27,13 @@ namespace CourseLibrary.API.Helpers
                 return source;
             }
 
+            var orderByString = string.Empty;
+
             // the orderBy string is separated by ",", so we split it.
             var orderByAfterSplit = orderBy.Split(',');
 
-            // apply each orderby clause in reverse order - otherwise, the 
-            // IQueryable will be ordered in the wrong order
-            foreach (var orderByClause in orderByAfterSplit.Reverse())
+            // apply each orderby clause  
+            foreach (var orderByClause in orderByAfterSplit)
             {
                 // trim the orderBy clause, as it might contain leading
                 // or trailing spaces. Can't trim the var in foreach,
@@ -63,21 +64,25 @@ namespace CourseLibrary.API.Helpers
                     throw new ArgumentNullException("propertyMappingValue");
                 }
 
-                // Run through the property names in reverse
+                // Run through the property names 
                 // so the orderby clauses are applied in the correct order
                 foreach (var destinationProperty in 
-                    propertyMappingValue.DestinationProperties.Reverse())
+                    propertyMappingValue.DestinationProperties)
                 {
                     // revert sort order if necessary
                     if (propertyMappingValue.Revert)
                     {
                         orderDescending = !orderDescending;
                     }
-                    source = source.OrderBy(destinationProperty + 
-                        (orderDescending ? " descending" : " ascending"));
+
+                    orderByString = orderByString + 
+                        (string.IsNullOrWhiteSpace(orderByString) ? string.Empty : ", ") 
+                        + destinationProperty 
+                        + (orderDescending ? " descending" : " ascending");                     
                 }
-            }
-            return source;
+            } 
+
+            return source.OrderBy(orderByString);
         }
     }
 }

@@ -12,8 +12,7 @@ namespace CourseLibrary.API.Profiles
         {
             CreateMap<Entities.Course, Models.CourseDto>();
             CreateMap<Models.CourseForCreationDto, Entities.Course>();
-            CreateMap<Models.CourseForUpdateDto, Entities.Course>();
-            CreateMap<Entities.Course, Models.CourseForUpdateDto>();
+            CreateMap<Models.CourseForUpdateDto, Entities.Course>().ReverseMap();
         }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,23 +54,46 @@ namespace CourseLibrary.API
                  setupAction.SerializerSettings.ContractResolver =
                     new CamelCasePropertyNamesContractResolver();
              })
-             .AddXmlDataContractSerializerFormatters()
+            .AddXmlDataContractSerializerFormatters()
             .ConfigureApiBehaviorOptions(setupAction =>
             {
                 setupAction.InvalidModelStateResponseFactory = context =>
                 {
-                    var problemDetails = new ValidationProblemDetails(context.ModelState)
+                // create a problem details object
+                var problemDetailsFactory = context.HttpContext.RequestServices
+                        .GetRequiredService<ProblemDetailsFactory>();
+                    var problemDetails = problemDetailsFactory.CreateValidationProblemDetails(
+                            context.HttpContext,
+                            context.ModelState);
+
+                // add additional info not added by default
+                problemDetails.Detail = "See the errors field for details.";
+                    problemDetails.Instance = context.HttpContext.Request.Path;
+
+                // find out which status code to use
+                var actionExecutingContext =
+                          context as Microsoft.AspNetCore.Mvc.Filters.ActionExecutingContext;
+
+                // if there are modelstate errors & all arguments were correctly
+                // found/parsed we're dealing with validation errors
+                if ((context.ModelState.ErrorCount > 0) &&
+                        (actionExecutingContext?.ActionArguments.Count == context.ActionDescriptor.Parameters.Count))
                     {
-                        Type = "https://courselibrary.com/modelvalidationproblem",
-                        Title = "One or more model validation errors occurred.",
-                        Status = StatusCodes.Status422UnprocessableEntity,
-                        Detail = "See the errors property for details.",
-                        Instance = context.HttpContext.Request.Path
-                    };
+                        problemDetails.Type = "https://courselibrary.com/modelvalidationproblem";
+                        problemDetails.Status = StatusCodes.Status422UnprocessableEntity;
+                        problemDetails.Title = "One or more validation errors occurred.";
 
-                    problemDetails.Extensions.Add("traceId", context.HttpContext.TraceIdentifier);
+                        return new UnprocessableEntityObjectResult(problemDetails)
+                        {
+                            ContentTypes = { "application/problem+json" }
+                        };
+                    }
 
-                    return new UnprocessableEntityObjectResult(problemDetails)
+                // if one of the arguments wasn't correctly found / couldn't be parsed
+                // we're dealing with null/unparseable input
+                problemDetails.Status = StatusCodes.Status400BadRequest;
+                    problemDetails.Title = "One or more errors on input occurred.";
+                    return new BadRequestObjectResult(problemDetails)
                     {
                         ContentTypes = { "application/problem+json" }
                     };

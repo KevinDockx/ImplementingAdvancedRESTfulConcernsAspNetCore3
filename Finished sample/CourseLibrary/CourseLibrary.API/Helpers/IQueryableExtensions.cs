@@ -64,17 +64,17 @@ namespace CourseLibrary.API.Helpers
                     throw new ArgumentNullException("propertyMappingValue");
                 }
 
+                // revert sort order if necessary
+                if (propertyMappingValue.Revert)
+                {
+                    orderDescending = !orderDescending;
+                }
+
                 // Run through the property names 
                 // so the orderby clauses are applied in the correct order
                 foreach (var destinationProperty in 
                     propertyMappingValue.DestinationProperties)
                 {
-                    // revert sort order if necessary
-                    if (propertyMappingValue.Revert)
-                    {
-                        orderDescending = !orderDescending;
-                    }
-
                     orderByString = orderByString + 
                         (string.IsNullOrWhiteSpace(orderByString) ? string.Empty : ", ") 
                         + destinationProperty 

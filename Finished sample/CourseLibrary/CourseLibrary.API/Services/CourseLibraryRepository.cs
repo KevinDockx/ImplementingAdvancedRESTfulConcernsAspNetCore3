@@ -176,7 +176,7 @@ namespace CourseLibrary.API.Services
 
             return _context.Authors.Where(a => authorIds.Contains(a.Id))
                 .OrderBy(a => a.FirstName)
-                .OrderBy(a => a.LastName)
+                .ThenBy(a => a.LastName)
                 .ToList();
         }
 
